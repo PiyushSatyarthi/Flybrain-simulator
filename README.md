@@ -68,7 +68,7 @@ You need:
 **1. Get the code**
 
 ```bash
-git clone https://github.com/<your-username>/flylab.git
+git clone https://github.com/PiyushSatyarthi/flylab.git
 cd flylab
 ```
 
