@@ -1,0 +1,14 @@
+{
+  "name": "flylab",
+  "version": "1.0.0",
+  "description": "Whole-brain spiking simulation of Drosophila (FlyWire connectome) in a virtual arena, with neuron and brain-region lesions",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8000 --directory app",
+    "test": "node build/test.js",
+    "lesion": "node build/lesion.js",
+    "screen": "node build/screen.js",
+    "fetch-data": "bash build/fetch_data.sh",
+    "build-data": "python3 build/preprocess.py"
+  }
+}

@@ -1,0 +1,980 @@
+<title>FlyLab Lesion Rig</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#E9ECE7; --panel:#F7F8F5; --panel2:#EEF1EC; --ink:#18201D; --muted:#5B6862; --line:#CBD2CC;
+  --accent:#B5680F; --accentSoft:#F3E3CC; --spike:#0B8481; --lesion:#B3261E; --lesionSoft:#F6DAD6; --ok:#2F7D3B;
+  --floor:#DDE2DB; --floorLine:#C9D0C8; --fly:#3A2E22; --eye:#B0231B; --wing:rgba(180,200,210,.55);
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0F1513; --panel:#161E1B; --panel2:#1C2522; --ink:#DCE4DF; --muted:#8C9A93; --line:#2C3834;
+    --accent:#E49A43; --accentSoft:#3A2A16; --spike:#3CCFC3; --lesion:#EF6B5F; --lesionSoft:#3B1E1B; --ok:#6CC47A;
+    --floor:#1A2320; --floorLine:#24302C; --fly:#C9B79B; --eye:#E0493D; --wing:rgba(170,200,215,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0F1513; --panel:#161E1B; --panel2:#1C2522; --ink:#DCE4DF; --muted:#8C9A93; --line:#2C3834;
+  --accent:#E49A43; --accentSoft:#3A2A16; --spike:#3CCFC3; --lesion:#EF6B5F; --lesionSoft:#3B1E1B; --ok:#6CC47A;
+  --floor:#1A2320; --floorLine:#24302C; --fly:#C9B79B; --eye:#E0493D; --wing:rgba(170,200,215,.35);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size:13px;line-height:1.45;padding-inline:16px;padding-block:10px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto minmax(0,1fr);gap:10px;height:100%;min-height:640px}
+header{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font-family:var(--cond);font-weight:600;font-size:20px;margin:0;letter-spacing:.01em}
+.brand span{color:var(--muted);font-size:12px}
+.hctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.readout{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 8px;white-space:nowrap}
+.readout b{color:var(--ink);font-weight:500}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 10px;font-family:var(--cond);font-weight:500;letter-spacing:.02em}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.btn.on{background:var(--accentSoft);border-color:var(--accent);color:var(--ink)}
+.btn.danger{color:var(--lesion);border-color:var(--lesion)}
+.btn:disabled{opacity:.45;cursor:default}
+select,input[type=text],input[type=number]{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 6px}
+.stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:8px;min-height:0}
+.tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tools .lbl{font-family:var(--cond);text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--muted);margin-right:2px}
+.opts{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);min-height:28px}
+.opts label{display:flex;gap:5px;align-items:center}
+.opts input[type=range]{width:110px;accent-color:var(--accent)}
+.arenaWrap{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--floor);min-height:260px}
+#arena{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
+.pill{font-family:var(--cond);font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+.pill.air{background:var(--accentSoft);border-color:var(--accent)}
+.pill.hit{background:var(--lesionSoft);border-color:var(--lesion);color:var(--lesion)}
+.pill.les{background:var(--lesionSoft);border-color:var(--lesion);color:var(--lesion)}
+.zoom{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--muted)}
+.zoom input{width:90px;accent-color:var(--accent)}
+.lower{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0}
+.card h3{font-family:var(--cond);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 6px;display:flex;justify-content:space-between;gap:8px}
+.card h3 em{font-style:normal;text-transform:none;letter-spacing:0;font-family:var(--mono);font-weight:400}
+#eye{width:100%;height:120px;display:block;border-radius:4px;background:var(--panel2)}
+.motor{display:grid;grid-template-columns:minmax(0,1fr) 64px 64px 50px;gap:3px 8px;align-items:center;font-size:12px}
+.motor .h{font-family:var(--cond);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.motor .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.motor .nm small{color:var(--muted);font-family:var(--mono);font-size:10px}
+.bar{height:8px;background:var(--panel2);border-radius:2px;overflow:hidden;position:relative}
+.bar i{position:absolute;top:0;bottom:0;background:var(--spike);width:0}
+.bar.l i{right:0}
+.bar.r i{left:0}
+.hz{font-family:var(--mono);font-size:11px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.motor .sil .nm{color:var(--lesion);text-decoration:line-through}
+.side{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:9px 4px;font-family:var(--cond);font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted);border-bottom:2px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.sec h4{font-family:var(--cond);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;color:var(--ink)}
+.sec p{margin:0 0 6px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:12px}
+.chip:hover{border-color:var(--lesion)}
+.regions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center}
+.regions .rn{font-size:12px}
+.regions .rn small{color:var(--muted);font-family:var(--mono);font-size:10px;display:block}
+.seg{display:flex}
+.seg button{background:var(--panel2);border:1px solid var(--line);padding:2px 7px;font-family:var(--mono);font-size:11px;margin-left:-1px}
+.seg button:first-child{border-radius:4px 0 0 4px;margin-left:0}
+.seg button:last-child{border-radius:0 4px 4px 0}
+.seg button.on{background:var(--lesionSoft);border-color:var(--lesion);color:var(--lesion);position:relative}
+.seg button:disabled{opacity:.3;cursor:default}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.row input[type=text]{flex:1;min-width:120px}
+.list{display:flex;flex-direction:column;gap:4px}
+.item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;background:var(--lesionSoft);border:1px solid transparent}
+.item.act{background:var(--accentSoft)}
+.item .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .n{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.item button{background:none;border:0;color:var(--muted);font-size:15px;line-height:1;padding:0 2px}
+.empty{color:var(--muted);font-style:italic;font-size:12px}
+.modes{display:flex;gap:0}
+.modes button{flex:1;border-radius:0;margin-left:-1px}
+.modes button:first-child{border-radius:4px 0 0 4px}
+.modes button:last-child{border-radius:0 4px 4px 0}
+#brain{width:100%;aspect-ratio:2/1;max-width:100%;display:block;background:var(--panel2);border-radius:4px}
+.toplist{display:grid;grid-template-columns:minmax(0,1fr) 60px;gap:2px 8px;font-size:12px}
+.toplist .v{font-family:var(--mono);text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.sens{display:grid;grid-template-columns:minmax(0,1fr) 90px 44px;gap:3px 8px;font-size:12px;align-items:center}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--cond);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:10px;color:var(--muted)}
+td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.tblwrap{overflow-x:auto}
+.res{display:flex;flex-direction:column;gap:6px}
+.resrow{display:grid;grid-template-columns:minmax(0,1fr) 110px 64px;gap:8px;align-items:center;font-size:12px}
+.resrow .rb{height:10px;background:var(--panel2);border-radius:2px;position:relative;overflow:hidden}
+.resrow .rb i{position:absolute;left:0;top:0;bottom:0;background:var(--spike)}
+.resrow.base .rb i{background:var(--muted)}
+.resrow .dv{font-family:var(--mono);font-size:11px;text-align:right;font-variant-numeric:tabular-nums}
+.dv.down{color:var(--lesion)} .dv.up{color:var(--ok)}
+.prog{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);width:0}
+.log{font-family:var(--mono);font-size:11px;max-height:92px;overflow:auto;color:var(--muted);display:flex;flex-direction:column-reverse}
+.log div b{color:var(--ink);font-weight:500}
+.log .e-takeoff b{color:var(--accent)} .log .e-hit b{color:var(--lesion)}
+.note{font-size:12px;color:var(--muted);border-left:3px solid var(--line);padding-left:8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+.src{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.loading{position:fixed;inset:0;display:grid;place-items:center;background:var(--ground);z-index:10}
+.loading div{text-align:center;max-width:420px;padding:16px}
+.loading h2{font-family:var(--cond);font-weight:600;margin:0 0 6px}
+.loading p{color:var(--muted);margin:0}
+.spin{width:180px;height:3px;background:var(--panel2);margin:14px auto 0;border-radius:2px;overflow:hidden;position:relative}
+.spin i{position:absolute;inset:0;width:40%;background:var(--accent);animation:sl 1.2s ease-in-out infinite}
+@keyframes sl{0%{left:-40%}100%{left:100%}}
+@media (prefers-reduced-motion: reduce){.spin i{animation:none;left:30%}}
+@media (max-width:1000px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}
+  .stage{grid-template-rows:auto 60vh auto}
+  .side{min-height:520px}
+  .lower{grid-template-columns:1fr}
+}
+</style>
+
+<div class="loading" id="loading"><div><h2>Wiring up a fruit-fly brain</h2><p id="loadmsg">Starting the simulator…</p><div class="spin"><i></i></div></div></div>
+
+<div class="app">
+  <header>
+    <div class="brand"><h1>FlyLab</h1><span>139,255 neurons · FlyWire FAFB v783 connectome · nothing scripted</span></div>
+    <div class="hctl">
+      <span class="readout">t <b id="tRead">0.000</b> s</span>
+      <span class="readout" title="Simulated milliseconds per real millisecond">speed <b id="rtfRead">–</b>×</span>
+      <span class="readout">spikes/frame <b id="spkRead">0</b></span>
+      <label class="readout" for="speedSel">rate
+        <select id="speedSel" style="border:0;padding:0 0 0 4px;background:none">
+          <option value="0.05">0.05×</option><option value="0.1">0.1×</option><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option>
+        </select></label>
+      <button class="btn primary" id="runBtn">Pause</button>
+      <button class="btn" id="resetBtn" title="Fresh brain and body, same lesions">Reset fly</button>
+      <button class="btn" id="clearBtn">Clear stimuli</button>
+    </div>
+  </header>
+
+  <section class="stage">
+    <div>
+      <div class="tools" id="tools">
+        <span class="lbl">Stimulus</span>
+        <button class="btn on" data-tool="loom">Looming object</button>
+        <button class="btn" data-tool="passer">Small object</button>
+        <button class="btn" data-tool="sound">Sound</button>
+        <button class="btn" data-tool="wind">Wind</button>
+        <button class="btn" data-tool="touch">Touch</button>
+        <button class="btn" data-tool="food">Food</button>
+        <button class="btn" data-tool="co2">CO₂</button>
+        <button class="btn" data-tool="move">Move fly</button>
+      </div>
+      <div class="opts" id="opts"></div>
+    </div>
+    <div class="arenaWrap" id="arenaWrap">
+      <canvas id="arena"></canvas>
+      <div class="hud" id="hud"></div>
+      <label class="zoom" for="zoom">zoom <input type="range" id="zoom" min="3" max="40" value="16"> <input type="checkbox" id="follow" checked title="Camera follows the fly"> follow</label>
+    </div>
+    <div class="lower">
+      <div class="card">
+        <h3>Descending &amp; motor neuron output <em>L · R  Hz/neuron</em></h3>
+        <div class="motor" id="motor"></div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:8px">
+        <div>
+          <h3>Fly's-eye view <em>azimuth −180° … +180°</em></h3>
+          <canvas id="eye"></canvas>
+        </div>
+        <div>
+          <h3>Event log</h3>
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="lesion">Lesions</button>
+      <button role="tab" aria-selected="false" data-tab="exp">Experiments</button>
+      <button role="tab" aria-selected="false" data-tab="brain">Brain</button>
+      <button role="tab" aria-selected="false" data-tab="model">Model</button>
+    </div>
+
+    <div class="pane" id="tab-lesion">
+      <div class="sec">
+        <div class="modes row" style="margin-bottom:6px">
+          <button class="btn on" id="modeSil">Silence neurons</button>
+          <button class="btn" id="modeAct">Activate (optogenetics)</button>
+        </div>
+        <p id="modeHelp">Silenced neurons never fire. Their synapses stay in the wiring diagram but carry no signal. Changes apply to the running fly immediately.</p>
+      </div>
+      <div class="sec">
+        <h4>Active manipulations <span class="src" id="silCount"></span></h4>
+        <div class="list" id="lesList"></div>
+        <div class="row" style="margin-top:6px"><button class="btn danger" id="clearLes">Restore all neurons</button></div>
+      </div>
+      <div class="sec">
+        <h4>Quick picks</h4>
+        <div class="chips" id="presets"></div>
+      </div>
+      <div class="sec">
+        <h4>Brain regions</h4>
+        <p>A neuron belongs to the region where it receives most of its input synapses.</p>
+        <div class="regions" id="regions"></div>
+      </div>
+      <div class="sec">
+        <h4>Cell type</h4>
+        <div class="row">
+          <input type="text" id="typeInput" list="typeList" placeholder="e.g. DNp01, LPLC2, MDN, KCg-m" autocomplete="off">
+          <select id="typeSide"><option value="both">both sides</option><option value="0">left</option><option value="1">right</option></select>
+          <button class="btn" id="typeAdd">Add</button>
+        </div>
+        <datalist id="typeList"></datalist>
+        <p class="src" id="typeInfo" style="margin-top:4px"></p>
+      </div>
+      <div class="sec">
+        <h4>Single neuron</h4>
+        <div class="row">
+          <input type="text" id="neuronInput" placeholder="FlyWire root ID, or type + number (DNp01 #2)">
+          <button class="btn" id="neuronAdd">Add</button>
+        </div>
+      </div>
+      <div class="sec">
+        <h4>Whole class</h4>
+        <div class="row">
+          <select id="classSel" style="flex:1"></select>
+          <button class="btn" id="classAdd">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="tab-exp" hidden>
+      <div class="sec">
+        <h4>Protocol</h4>
+        <p>Each trial starts a fresh fly and replays the same stimulus. Trial <i>k</i> uses the same random seed in every condition, so differences come from the manipulation.</p>
+        <div class="row">
+          <select id="protoSel" style="flex:1"></select>
+          <label for="trialsIn" class="src">trials</label><input type="number" id="trialsIn" value="5" min="1" max="30" style="width:56px">
+        </div>
+      </div>
+      <div class="sec">
+        <h4>Intact vs. current manipulations</h4>
+        <div class="row"><button class="btn primary" id="cmpBtn">Run comparison</button><span class="src" id="cmpNote"></span></div>
+      </div>
+      <div class="sec">
+        <h4>Knockout screen (one by one)</h4>
+        <p>Silences each candidate on its own, reruns the protocol and ranks the candidates by how much the chosen measure changes.</p>
+        <div class="row" style="margin-bottom:6px">
+          <select id="screenSrc" style="flex:1">
+            <option value="regions">Each brain region, each side</option>
+            <option value="up:gf">Top 20 cell types wired into the Giant Fiber</option>
+            <option value="up:loom">Top 20 cell types wired into looming DNs</option>
+            <option value="up:prob">Top 20 cell types wired into proboscis motor neurons</option>
+            <option value="up:fwd">Top 20 cell types wired into forward-walking DN (DNp09)</option>
+            <option value="up:turn">Top 20 cell types wired into turning DNs</option>
+            <option value="each">Each neuron of one cell type</option>
+            <option value="custom">My list of cell types</option>
+          </select>
+        </div>
+        <div class="row" id="screenExtra" style="margin-bottom:6px" hidden>
+          <input type="text" id="screenText" placeholder="LPLC2, LC4, LC6, DNp02">
+        </div>
+        <div class="row">
+          <label for="metricSel" class="src">measure</label>
+          <select id="metricSel" style="flex:1"></select>
+          <button class="btn primary" id="screenBtn">Run screen</button>
+        </div>
+      </div>
+      <div class="sec" id="expOut">
+        <div class="row" style="justify-content:space-between"><h4 id="expTitle">Results</h4><button class="btn" id="cancelBtn" hidden>Cancel</button></div>
+        <div class="prog"><i id="expProg"></i></div>
+        <p class="src" id="expStatus" style="margin-top:4px">No experiment run yet.</p>
+        <div class="res" id="expRes"></div>
+        <div class="tblwrap" id="expTbl"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="tab-brain" hidden>
+      <div class="sec">
+        <h4>Whole-brain activity <span class="src">frontal view, each dot is a neuron</span></h4>
+        <canvas id="brain"></canvas>
+        <p class="src" style="margin-top:4px">Bright dots are spikes. Red dots are silenced neurons. Amber dots are optogenetically driven.</p>
+      </div>
+      <div class="sec">
+        <h4>Most active cell types <span class="src">last ¼ s</span></h4>
+        <div class="toplist" id="topList"></div>
+      </div>
+      <div class="sec">
+        <h4>Sensory input <span class="src">mean Hz per neuron</span></h4>
+        <div class="sens" id="sensList"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="tab-model" hidden>
+      <div class="sec">
+        <h4>What is simulated</h4>
+        <p>Every neuron in the adult fly brain is a leaky integrate-and-fire unit wired exactly as in the FlyWire connectome: 139,255 neurons and 2.7 million connections, each weighted by its synapse count. Excitation or inhibition comes from each neuron's transmitter (acetylcholine excites; GABA, glutamate and histamine inhibit). Parameters follow Shiu et al. 2024, which showed this kind of model predicts real feeding and grooming circuits.</p>
+        <p>There are no behaviour rules. The world only sets the firing rates of sensory neurons, and the body only reads the firing rates of the descending and motor neurons listed below. If a lesion changes behaviour, it is because it changed how activity flows through the wiring.</p>
+      </div>
+      <div class="sec">
+        <h4>Brain → body readout</h4>
+        <p>The ventral nerve cord that turns descending commands into leg and wing movements is not part of the brain connectome, so it is replaced by this fixed table. It never looks at stimuli or lesions.</p>
+        <div class="tblwrap"><table id="motorTbl"><thead><tr><th>Output</th><th>Neurons</th><th>Evidence</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="sec">
+        <h4>World → brain transduction</h4>
+        <div class="tblwrap"><table id="sensTbl"><thead><tr><th>Channel</th><th class="num">Neurons</th></tr></thead><tbody></tbody></table></div>
+        <p class="note" style="margin-top:6px">Vision enters at the looming and small-object detectors of the lobula (LPLC2, LC4, LPLC1, LC6, LC11, LC10a). Each detector's receptive field comes from its photoreceptor inputs in the connectome. Pure-retina mode drives the 11,000 photoreceptors instead and leaves all visual processing to the model, which cannot compute motion well because it has no graded neurons.</p>
+      </div>
+      <div class="sec">
+        <h4>Model settings</h4>
+        <div class="kv">
+          <dt><label for="visMode">Visual entry point</label></dt>
+          <dd><select id="visMode"><option value="features">Feature detectors (default)</option><option value="retina">Pure retina (photoreceptors)</option></select></dd>
+          <dt><label for="arousal">Global arousal</label></dt>
+          <dd><input type="range" id="arousal" min="0" max="6" step="0.5" value="0"> <span class="src" id="arousalV">off</span></dd>
+          <dt><label for="noise">Membrane noise</label></dt>
+          <dd><input type="range" id="noise" min="0" max="3" step="0.25" value="0"> <span class="src" id="noiseV">off</span></dd>
+          <dt><label for="stdU">Synaptic depression</label></dt>
+          <dd><input type="range" id="stdU" min="0" max="0.3" step="0.05" value="0.1"> <span class="src" id="stdUV">0.10</span></dd>
+          <dt><label for="adapt">Spike adaptation</label></dt>
+          <dd><input type="range" id="adapt" min="0" max="3" step="0.25" value="1"> <span class="src" id="adaptV">1.00 mV</span></dd>
+        </div>
+        <p class="note" style="margin-top:6px">Arousal depolarises every neuron equally. It stands in for the neuromodulatory state that makes real flies walk spontaneously, which the wiring diagram does not contain. Above ~3 mV the brain runs roughly 3× slower.</p>
+      </div>
+      <div class="sec">
+        <h4>Known limits</h4>
+        <p>Touch on the legs, wings and thorax is sensed in the ventral nerve cord, so only head, eye and antenna touch is available. Hunger, fatigue and learning are not modelled. Transmitter identities come from machine predictions (Eckstein et al. 2024) where no experiment exists, and some are wrong. In the intact model the fly stands still until something drives its walking neurons, because nothing in the wiring alone produces spontaneous walking.</p>
+      </div>
+      <div class="sec">
+        <h4>Sources</h4>
+        <p class="src">Dorkenwald et al. 2024, Schlegel et al. 2024 (Nature 634) — FlyWire connectome and annotations. Shiu et al. 2024 (Nature 634) — whole-brain LIF model. Klapoetke et al. 2017; von Reyn et al. 2014; Ache et al. 2019 — looming escape. Bidaye et al. 2014, 2020; Braun et al. 2024 — walking descending neurons. Namiki et al. 2022 — flight power. Kamikouchi et al. 2009 — Johnston's organ zones.</p>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $ = function(id){ return document.getElementById(id); };
+var worker = new Worker('sim-worker.js');
+var M = null, A = null, N = 0, motorInfo = null, sensorInfo = null, protocols = [];
+var frame = null, running = true;
+var tool = 'loom', mode = 'silence', forceRate = 150;
+var items = [];               // {id,label,idx:Int32Array|Array,mode}
+var silMask = null, actMask = null;
+var logLines = [];
+var zoom = 16, cam = {x:0,y:0};
+var css = {};
+function readCss(){ var s = getComputedStyle(document.documentElement); ['ground','panel','panel2','ink','muted','line','accent','spike','lesion','floor','floorLine','fly','eye','wing','accentSoft','ok'].forEach(function(k){ css[k] = s.getPropertyValue('--'+k).trim(); }); }
+readCss();
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){ readCss(); brainBase = null; }); } catch(e){}
+new MutationObserver(function(){ readCss(); brainBase = null; }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------------------------------------------------------------- worker */
+worker.onmessage = function(e){
+  var m = e.data;
+  if (m.type === 'status') $('loadmsg').textContent = m.text;
+  else if (m.type === 'error') { $('loadmsg').textContent = 'Error: ' + m.message; addLog({t: frame ? frame.t : 0, e: 'error', text: m.message}); }
+  else if (m.type === 'ready') onReady(m);
+  else if (m.type === 'frame') { frame = m; if (m.events && m.events.length) m.events.forEach(addLog); }
+  else if (m.type === 'protocols') { protocols = m.list; fillProtocols(); }
+  else if (m.type === 'expProgress') onExpProgress(m);
+  else if (m.type === 'expPartial') onExpPartial(m);
+  else if (m.type === 'expResult') onExpResult(m);
+  else if (m.type === 'expCancelled') { $('expStatus').textContent = 'Cancelled.'; $('cancelBtn').hidden = true; expRunning = false; }
+  else if (m.type === 'upstream' && upstreamCb[m.id]) { upstreamCb[m.id](m.list); delete upstreamCb[m.id]; }
+};
+worker.onerror = function(e){ $('loadmsg').textContent = 'The simulator failed to start: ' + (e.message || 'unknown error'); };
+worker.postMessage({type:'init', base:''});
+
+function onReady(m){
+  M = m.meta; A = m.arrays; N = m.N; motorInfo = m.motor; sensorInfo = m.sensors;
+  silMask = new Uint8Array(N); actMask = new Uint8Array(N);
+  $('loading').hidden = true;
+  buildTypeIndex(); buildPresets(); buildRegions(); buildClassSel(); buildMotor(); buildModelTables(); buildBrainGeom(); applyItems();
+  worker.postMessage({type:'protocols'});
+  renderOpts();
+  requestAnimationFrame(draw);
+}
+
+/* ---------------------------------------------------------------- helpers */
+var typeIdx = {}, typeCount = null, typeMembers = null;
+function buildTypeIndex(){
+  typeCount = new Uint32Array(M.types.length);
+  for (var i = 0; i < N; i++) typeCount[A.type[i]]++;
+  M.types.forEach(function(t, i){ typeIdx[t] = i; });
+  var dl = $('typeList'), frag = document.createDocumentFragment();
+  M.types.forEach(function(t, i){ if (typeCount[i] && t[0] !== '(') { var o = document.createElement('option'); o.value = t; frag.appendChild(o); } });
+  dl.appendChild(frag);
+}
+function byTypes(names, side){
+  var want = {}; names.forEach(function(n){ if (typeIdx[n] !== undefined) want[typeIdx[n]] = 1; });
+  var out = []; for (var i = 0; i < N; i++) if (want[A.type[i]] && (side === undefined || side === 'both' || A.side[i] === +side)) out.push(i);
+  return out;
+}
+function bySub(names){ var want = {}; names.forEach(function(n){ var k = M.subclasses.indexOf(n); if (k >= 0) want[k] = 1; }); var out = []; for (var i = 0; i < N; i++) if (want[A.sub[i]]) out.push(i); return out; }
+function byNeuropils(nps){ var want = {}; nps.forEach(function(n){ var k = M.neuropils.indexOf(n); if (k >= 0) want[k] = 1; }); var out = []; for (var i = 0; i < N; i++) if (want[A.np[i]]) out.push(i); return out; }
+function npNames(bases, side){
+  var out = [];
+  bases.forEach(function(b){
+    var hasL = M.neuropils.indexOf(b + '_L') >= 0, hasU = M.neuropils.indexOf(b) >= 0;
+    if (hasL) { if (side !== 'R') out.push(b + '_L'); if (side !== 'L') out.push(b + '_R'); }
+    if (hasU && side === 'both') out.push(b);
+  });
+  return out;
+}
+function fmt(x, d){ return x === null || x === undefined || isNaN(x) ? '–' : (+x).toFixed(d === undefined ? 1 : d); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+/* ---------------------------------------------------------------- lesions */
+var REGIONS = [
+  {label:'Optic lobe', nps:['LA','ME','AME','LO','LOP']},
+  {label:'Antennal lobe', nps:['AL']},
+  {label:'Mushroom body', nps:['MB_CA','MB_PED','MB_VL','MB_ML']},
+  {label:'Lateral horn', nps:['LH']},
+  {label:'Central complex', nps:['PB','FB','EB','NO']},
+  {label:'Lateral complex', nps:['LAL','BU','GA']},
+  {label:'Ventrolateral protocerebrum', nps:['AVLP','PVLP','PLP','AOTU','WED']},
+  {label:'Superior protocerebrum', nps:['SLP','SIP','SMP']},
+  {label:'Inferior neuropils', nps:['CRE','SCL','ICL','IB','ATL']},
+  {label:'Ventromedial neuropils', nps:['VES','EPA','GOR','SPS','IPS']},
+  {label:'Hearing centre', nps:['AMMC','SAD']},
+  {label:'Subesophageal zone', nps:['GNG','PRW','FLA','CAN']},
+  {label:'Ocellar ganglion', nps:['OCG']}
+];
+function addItem(label, idx, key){
+  if (!idx.length) { flash('No neurons match ' + label + '.'); return; }
+  key = key || (mode + ':' + label);
+  if (items.some(function(it){ return it.key === key; })) return;
+  items.push({key: key, label: label, idx: idx, mode: mode});
+  applyItems();
+}
+function removeItem(key){ items = items.filter(function(it){ return it.key !== key; }); applyItems(); }
+function toggleItem(label, idx, key){ if (items.some(function(it){ return it.key === key; })) removeItem(key); else addItem(label, idx, key); }
+function applyItems(){
+  silMask.fill(0); actMask.fill(0);
+  items.forEach(function(it){ var m = it.mode === 'silence' ? silMask : actMask; for (var k = 0; k < it.idx.length; k++) m[it.idx[k]] = 1; });
+  var sil = [], act = [];
+  for (var i = 0; i < N; i++) { if (silMask[i]) sil.push(i); else if (actMask[i]) act.push(i); }
+  worker.postMessage({type:'silence', list: sil});
+  worker.postMessage({type:'force', list: act, rate: forceRate});
+  $('silCount').textContent = (sil.length ? sil.length.toLocaleString() + ' silenced' : '') + (sil.length && act.length ? ' · ' : '') + (act.length ? act.length.toLocaleString() + ' driven' : '');
+  var L = $('lesList'); L.innerHTML = '';
+  if (!items.length) L.innerHTML = '<div class="empty">Intact brain. Nothing silenced.</div>';
+  items.forEach(function(it){
+    var d = document.createElement('div'); d.className = 'item' + (it.mode === 'activate' ? ' act' : '');
+    d.innerHTML = '<span class="t">' + (it.mode === 'activate' ? 'Drive ' : 'Silence ') + esc(it.label) + '</span><span class="n">' + it.idx.length.toLocaleString() + '</span><button aria-label="Remove">×</button>';
+    d.querySelector('button').onclick = function(){ removeItem(it.key); };
+    L.appendChild(d);
+  });
+  refreshRegionButtons(); refreshMotorSil(); brainBase = null;
+  $('cmpNote').textContent = items.length ? sil.length.toLocaleString() + ' neurons silenced' + (act.length ? ', ' + act.length + ' driven' : '') : 'add a lesion first';
+}
+function buildPresets(){
+  var P = [
+    ['Giant Fiber (DNp01)', function(){ return byTypes(['DNp01']); }],
+    ['Looming detectors LPLC2 + LC4', function(){ return byTypes(['LPLC2','LC4']); }],
+    ['GF + looming DNs', function(){ return byTypes(['DNp01','DNp02','DNp04','DNp06','DNp11']); }],
+    ['Left optic lobe', function(){ return byNeuropils(npNames(REGIONS[0].nps, 'L')); }],
+    ['Right optic lobe', function(){ return byNeuropils(npNames(REGIONS[0].nps, 'R')); }],
+    ['Both optic lobes', function(){ return byNeuropils(npNames(REGIONS[0].nps, 'both')); }],
+    ['Mushroom bodies', function(){ return byNeuropils(npNames(REGIONS[2].nps, 'both')); }],
+    ['Central complex', function(){ return byNeuropils(npNames(REGIONS[4].nps, 'both')); }],
+    ['Sugar taste neurons', function(){ return bySub(['sugar/water']); }],
+    ['Proboscis motor neurons', function(){ return bySub(['proboscis_motor_neuron','haustellum_motor_neuron']); }],
+    ['Johnston organ (hearing)', function(){ var o = []; M.types.forEach(function(t){ if (t.indexOf('JO-') === 0) o = o.concat(byTypes([t])); }); return o; }],
+    ['Left hemisphere (by cell body)', function(){ var o = []; for (var i = 0; i < N; i++) if (A.side[i] === 0) o.push(i); return o; }],
+    ['Forward walking DN (DNp09)', function(){ return byTypes(['DNp09']); }]
+  ];
+  var c = $('presets');
+  P.forEach(function(p){ var b = document.createElement('button'); b.className = 'chip'; b.textContent = p[0]; b.onclick = function(){ addItem(p[0], p[1]()); }; c.appendChild(b); });
+}
+function buildRegions(){
+  var R = $('regions');
+  REGIONS.forEach(function(r, ri){
+    var paired = r.nps.some(function(n){ return M.neuropils.indexOf(n + '_L') >= 0; });
+    var nb = byNeuropils(npNames(r.nps, 'both')).length;
+    var nm = document.createElement('div'); nm.className = 'rn'; nm.innerHTML = esc(r.label) + '<small>' + r.nps.join(' ') + ' · ' + nb.toLocaleString() + ' neurons</small>';
+    var seg = document.createElement('div'); seg.className = 'seg';
+    ['L','R','both'].forEach(function(s){
+      var b = document.createElement('button'); b.textContent = s === 'both' ? 'L+R' : s; b.dataset.key = 'reg:' + ri + ':' + s;
+      if (!paired && s !== 'both') b.disabled = true;
+      b.onclick = function(){ var lab = r.label + (s === 'both' ? '' : (s === 'L' ? ' (left)' : ' (right)')); toggleItem(lab, byNeuropils(npNames(r.nps, s)), mode + ':reg:' + ri + ':' + s); };
+      seg.appendChild(b);
+    });
+    R.appendChild(nm); R.appendChild(seg);
+  });
+}
+function refreshRegionButtons(){
+  document.querySelectorAll('#regions button').forEach(function(b){ b.classList.toggle('on', items.some(function(it){ return it.key.slice(it.key.indexOf(':') + 1) === b.dataset.key; })); });
+}
+function buildClassSel(){
+  var s = $('classSel'), opts = [];
+  M.superclasses.forEach(function(n, i){ if (n) opts.push(['sc', i, 'Super-class: ' + n.replace(/_/g,' ')]); });
+  M.classes.forEach(function(n, i){ if (n) opts.push(['cl', i, 'Class: ' + n.replace(/_/g,' ')]); });
+  opts.forEach(function(o){ var e = document.createElement('option'); e.value = o[0] + ':' + o[1]; e.textContent = o[2]; s.appendChild(e); });
+}
+$('classAdd').onclick = function(){
+  var v = $('classSel').value.split(':'), arr = A[v[0]], k = +v[1], out = [];
+  for (var i = 0; i < N; i++) if (arr[i] === k) out.push(i);
+  addItem($('classSel').selectedOptions[0].textContent.replace(/^[^:]+: /, 'all '), out);
+};
+$('typeInput').addEventListener('input', function(){
+  var t = this.value.trim(), k = typeIdx[t];
+  $('typeInfo').textContent = k !== undefined ? typeCount[k] + ' neurons · transmitter ' + M.nts[A.nt[byTypes([t])[0]]] + ' · region ' + M.neuropils[A.np[byTypes([t])[0]]] : '';
+});
+$('typeAdd').onclick = function(){
+  var t = $('typeInput').value.trim(), s = $('typeSide').value;
+  if (typeIdx[t] === undefined) { flash('Unknown cell type "' + t + '". Pick one from the suggestions.'); return; }
+  addItem(t + (s === 'both' ? '' : s === '0' ? ' (left)' : ' (right)'), byTypes([t], s));
+};
+$('typeInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('typeAdd').click(); });
+$('neuronAdd').onclick = function(){
+  var v = $('neuronInput').value.trim();
+  var m = v.match(/^(.+?)\s*#\s*(\d+)$/);
+  if (m) { var list = byTypes([m[1].trim()]); var k = +m[2] - 1; if (list[k] !== undefined) { addItem(m[1].trim() + ' #' + (k + 1) + ' (' + M.sides[A.side[list[k]]] + ')', [list[k]]); return; } flash('That cell type does not have ' + m[2] + ' neurons.'); return; }
+  flash('Root IDs need the full ID list; loading it…');
+  fetch('meta.json').then(function(r){ return r.json(); }).then(function(full){
+    var i = full.root_ids.indexOf(v);
+    if (i < 0) flash('Root ID ' + v + ' is not in FAFB v783.'); else addItem(M.types[A.type[i]] + ' ' + v.slice(-6), [i]);
+  });
+};
+$('clearLes').onclick = function(){ items = []; applyItems(); };
+function setMode(m){
+  mode = m; $('modeSil').classList.toggle('on', m === 'silence'); $('modeAct').classList.toggle('on', m === 'activate');
+  $('modeHelp').textContent = m === 'silence' ? 'Silenced neurons never fire. Their synapses stay in the wiring diagram but carry no signal. Changes apply to the running fly immediately.' : 'Driven neurons fire at 150 Hz, like CsChrimson activation under red light. Everything downstream follows from the wiring.';
+}
+$('modeSil').onclick = function(){ setMode('silence'); };
+$('modeAct').onclick = function(){ setMode('activate'); };
+function flash(t){ addLog({t: frame ? frame.t : 0, e: 'note', text: t}); }
+
+/* ---------------------------------------------------------------- stimulus tools */
+var toolOpts = {loomSpeed: 250, loomSize: 5, loomEl: 10, freq: 200, amp: 3, pulsed: true, windSpeed: 2, flavor: 'sugar'};
+document.querySelectorAll('#tools [data-tool]').forEach(function(b){
+  b.onclick = function(){ tool = b.dataset.tool; document.querySelectorAll('#tools [data-tool]').forEach(function(x){ x.classList.toggle('on', x === b); }); renderOpts(); };
+});
+function renderOpts(){
+  var o = $('opts'), h = '';
+  if (tool === 'loom') h = 'Click around the fly to launch a dark disc toward it from that direction. ' +
+    '<label for="lsp">speed <input type="range" id="lsp" min="100" max="600" step="10" value="' + toolOpts.loomSpeed + '"><span id="lspv">' + toolOpts.loomSpeed + ' mm/s</span></label>' +
+    '<label for="lsz">radius <input type="range" id="lsz" min="1" max="12" value="' + toolOpts.loomSize + '"><span id="lszv">' + toolOpts.loomSize + ' mm</span></label>' +
+    '<label for="lel">elevation <input type="range" id="lel" min="-20" max="80" value="' + toolOpts.loomEl + '"><span id="lelv">' + toolOpts.loomEl + '°</span></label>' +
+    ' <button class="btn" data-q="-90">From left</button><button class="btn" data-q="90">From right</button><button class="btn" data-q="0">Front</button><button class="btn" data-q="180">Behind</button>';
+  else if (tool === 'passer') h = 'Click a side of the fly: a 2 mm object flies past 25 mm away. Drives the small-object detectors LC11 and LC10a.';
+  else if (tool === 'sound') h = 'Click to place a speaker. ' +
+    '<label for="sfq">frequency <input type="range" id="sfq" min="50" max="900" step="10" value="' + toolOpts.freq + '"><span id="sfqv">' + toolOpts.freq + ' Hz</span></label>' +
+    '<label for="sam">loudness <input type="range" id="sam" min="0.5" max="10" step="0.5" value="' + toolOpts.amp + '"><span id="samv">' + toolOpts.amp + '</span></label>' +
+    '<label for="spl"><input type="checkbox" id="spl"' + (toolOpts.pulsed ? ' checked' : '') + '> song pulses (35 ms)</label>';
+  else if (tool === 'wind') h = 'Click where the wind comes from. <label for="wsp">speed <input type="range" id="wsp" min="0.5" max="5" step="0.5" value="' + toolOpts.windSpeed + '"><span id="wspv">' + toolOpts.windSpeed + ' m/s</span></label> <button class="btn" id="windOff">Stop wind</button>';
+  else if (tool === 'touch') h = 'Brush a bristle field for 0.3 s: <button class="btn" data-touch="head">Head</button><button class="btn" data-touch="eyeL">Left eye</button><button class="btn" data-touch="eyeR">Right eye</button><button class="btn" data-touch="antL">Left antenna</button><button class="btn" data-touch="antR">Right antenna</button> Leg, wing and body touch is sensed outside the brain.';
+  else if (tool === 'food') h = 'Click to place a drop. Smell reaches the antennae; taste happens when the head is over the drop. <label for="fla">kind <select id="fla"><option value="sugar">sugar</option><option value="water">water</option><option value="bitter">bitter</option></select></label> <button class="btn" id="foodHere">Under the head</button>';
+  else if (tool === 'co2') h = 'Click to place a CO₂ source. Drives the V-glomerulus receptor neurons.';
+  else if (tool === 'move') h = 'Drag in the arena to put the fly there, pointing along the drag.';
+  o.innerHTML = h;
+  function bind(id, key, unit, fn){ var el = $(id); if (!el) return; el.oninput = function(){ toolOpts[key] = +el.value; $(id + 'v').textContent = el.value + unit; if (fn) fn(); }; }
+  bind('lsp','loomSpeed',' mm/s'); bind('lsz','loomSize',' mm'); bind('lel','loomEl','°');
+  bind('sfq','freq',' Hz'); bind('sam','amp',''); bind('wsp','windSpeed',' m/s', function(){ if (frame && frame.world.wind.on) worker.postMessage({type:'stim', kind:'wind', on:true, dir: frame.world.wind.dir, speed: toolOpts.windSpeed}); });
+  if ($('spl')) $('spl').onchange = function(){ toolOpts.pulsed = this.checked; };
+  if ($('fla')) { $('fla').value = toolOpts.flavor; $('fla').onchange = function(){ toolOpts.flavor = this.value; }; }
+  if ($('windOff')) $('windOff').onclick = function(){ worker.postMessage({type:'stim', kind:'wind', on:false, dir:0, speed:0}); };
+  if ($('foodHere')) $('foodHere').onclick = function(){ var b = frame.body; worker.postMessage({type:'stim', kind:'food', x: b.x + Math.cos(b.heading) * 1.2, y: b.y + Math.sin(b.heading) * 1.2, flavor: toolOpts.flavor}); };
+  o.querySelectorAll('[data-q]').forEach(function(b){ b.onclick = function(){ launchLoom(+b.dataset.q); }; });
+  o.querySelectorAll('[data-touch]').forEach(function(b){ b.onclick = function(){ worker.postMessage({type:'stim', kind:'touch', part: b.dataset.touch, dur: 300}); addLog({t: frame.t, e: 'stim', text: 'touch ' + b.textContent.toLowerCase()}); }; });
+}
+function launchLoom(az){
+  worker.postMessage({type:'stim', kind:'loom', az: az, el: toolOpts.loomEl, radius: toolOpts.loomSize, speed: toolOpts.loomSpeed, dist: 120});
+  addLog({t: frame ? frame.t : 0, e: 'stim', text: 'loom from ' + Math.round(az) + '° az'});
+}
+
+/* ---------------------------------------------------------------- arena */
+var cv = $('arena'), ctx = cv.getContext('2d'), dpr = 1;
+function resize(){
+  var r = cv.parentElement.getBoundingClientRect(); dpr = window.devicePixelRatio || 1;
+  cv.width = Math.max(10, r.width * dpr); cv.height = Math.max(10, r.height * dpr);
+  var e = $('eye'), er = e.getBoundingClientRect(); e.width = er.width * dpr; e.height = er.height * dpr;
+  var bcv = $('brain'), br = bcv.getBoundingClientRect(); if (br.width) { bcv.width = br.width * dpr; bcv.height = br.height * dpr; brainBase = null; }
+}
+window.addEventListener('resize', resize); setTimeout(resize, 0);
+$('zoom').oninput = function(){ zoom = +this.value; };
+function w2s(x, y){ return [cv.width / 2 + (x - cam.x) * zoom * dpr, cv.height / 2 - (y - cam.y) * zoom * dpr]; }
+function s2w(px, py){ return [(px * dpr - cv.width / 2) / (zoom * dpr) + cam.x, -(py * dpr - cv.height / 2) / (zoom * dpr) + cam.y]; }
+var drag = null;
+cv.addEventListener('pointerdown', function(ev){
+  if (!frame) return;
+  var r = cv.getBoundingClientRect(), p = s2w(ev.clientX - r.left, ev.clientY - r.top), b = frame.body;
+  if (tool === 'move') { drag = {x: p[0], y: p[1]}; cv.setPointerCapture(ev.pointerId); return; }
+  var ang = Math.atan2(p[1] - b.y, p[0] - b.x) - b.heading;
+  var dg = ang / Math.PI * 180; dg = ((dg + 180) % 360 + 360) % 360 - 180; var az = -dg;
+  if (tool === 'loom') launchLoom(az);
+  else if (tool === 'passer') { worker.postMessage({type:'stim', kind:'passer', az: az}); addLog({t: frame.t, e: 'stim', text: 'small object at ' + Math.round(az) + '°'}); }
+  else if (tool === 'sound') { worker.postMessage({type:'stim', kind:'sound', x: p[0], y: p[1], freq: toolOpts.freq, amp: toolOpts.amp, pulsed: toolOpts.pulsed}); addLog({t: frame.t, e: 'stim', text: 'speaker ' + toolOpts.freq + ' Hz'}); }
+  else if (tool === 'wind') { var dir = Math.atan2(b.y - p[1], b.x - p[0]); worker.postMessage({type:'stim', kind:'wind', on: true, dir: dir, speed: toolOpts.windSpeed}); addLog({t: frame.t, e: 'stim', text: 'wind ' + toolOpts.windSpeed + ' m/s'}); }
+  else if (tool === 'food') { worker.postMessage({type:'stim', kind:'food', x: p[0], y: p[1], flavor: toolOpts.flavor}); addLog({t: frame.t, e: 'stim', text: toolOpts.flavor + ' drop'}); }
+  else if (tool === 'co2') { worker.postMessage({type:'stim', kind:'co2', x: p[0], y: p[1], strength: 2}); addLog({t: frame.t, e: 'stim', text: 'CO₂ source'}); }
+});
+cv.addEventListener('pointerup', function(ev){
+  if (!drag) return;
+  var r = cv.getBoundingClientRect(), p = s2w(ev.clientX - r.left, ev.clientY - r.top);
+  var h = Math.hypot(p[0] - drag.x, p[1] - drag.y) > 0.5 ? Math.atan2(p[1] - drag.y, p[0] - drag.x) : undefined;
+  worker.postMessage({type:'stim', kind:'moveFly', x: drag.x, y: drag.y, heading: h}); drag = null;
+});
+
+function drawArena(){
+  var f = frame, b = f.body, W = f.world.W, H = f.world.H;
+  if ($('follow').checked) { cam.x += (b.x - cam.x) * 0.15; cam.y += (b.y - cam.y) * 0.15; }
+  ctx.fillStyle = css.ground; ctx.fillRect(0, 0, cv.width, cv.height);
+  var a = w2s(-W / 2, H / 2), c = w2s(W / 2, -H / 2);
+  ctx.fillStyle = css.floor; ctx.fillRect(a[0], a[1], c[0] - a[0], c[1] - a[1]);
+  ctx.strokeStyle = css.floorLine; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (var gx = -W / 2; gx <= W / 2 + 0.01; gx += 10) { var p = w2s(gx, 0); ctx.moveTo(p[0], a[1]); ctx.lineTo(p[0], c[1]); }
+  for (var gy = -H / 2; gy <= H / 2 + 0.01; gy += 10) { p = w2s(0, gy); ctx.moveTo(a[0], p[1]); ctx.lineTo(c[0], p[1]); }
+  ctx.stroke();
+  ctx.strokeStyle = css.muted; ctx.lineWidth = 2 * dpr; ctx.strokeRect(a[0], a[1], c[0] - a[0], c[1] - a[1]);
+  // scale bar
+  ctx.fillStyle = css.muted; ctx.font = (11 * dpr) + 'px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+  var sb = 10 * zoom * dpr; ctx.fillRect(12 * dpr, 14 * dpr, sb, 2 * dpr); ctx.fillText('10 mm', 12 * dpr, 30 * dpr);
+  var z = zoom * dpr;
+  // food
+  f.world.food.forEach(function(fo){
+    var q = w2s(fo.x, fo.y);
+    ctx.globalAlpha = 0.18 * fo.amount; ctx.fillStyle = fo.kind === 'bitter' ? css.lesion : css.accent;
+    ctx.beginPath(); ctx.arc(q[0], q[1], 15 * z, 0, 7); ctx.fill();
+    ctx.globalAlpha = 0.35 + 0.65 * fo.amount; ctx.beginPath(); ctx.arc(q[0], q[1], fo.r * z * (0.4 + 0.6 * fo.amount), 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = css.ink; ctx.fillText(fo.kind + (fo.amount < 1 ? ' ' + Math.round(fo.amount * 100) + '%' : ''), q[0] + fo.r * z + 4, q[1] - 4);
+  });
+  f.world.co2.forEach(function(s){ var q = w2s(s.x, s.y); var g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], 20 * z); g.addColorStop(0, 'rgba(120,120,160,.35)'); g.addColorStop(1, 'rgba(120,120,160,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], 20 * z, 0, 7); ctx.fill(); ctx.fillStyle = css.ink; ctx.fillText('CO₂', q[0] - 10 * dpr, q[1] + 4 * dpr); });
+  f.world.sounds.forEach(function(s){
+    var q = w2s(s.x, s.y); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5 * dpr;
+    var ph = (f.t % 600) / 600;
+    for (var k = 0; k < 3; k++) { var rr = ((ph + k / 3) % 1) * 12 * z; ctx.globalAlpha = 1 - ((ph + k / 3) % 1); ctx.beginPath(); ctx.arc(q[0], q[1], rr, 0, 7); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.fillStyle = css.accent; ctx.fillRect(q[0] - 4 * dpr, q[1] - 4 * dpr, 8 * dpr, 8 * dpr);
+    ctx.fillStyle = css.ink; ctx.fillText(s.freq + ' Hz' + (s.pulsed ? ' song' : ''), q[0] + 8 * dpr, q[1] - 6 * dpr);
+  });
+  if (f.world.wind.on) {
+    ctx.strokeStyle = css.muted; ctx.lineWidth = 1.2 * dpr; var d = f.world.wind.dir, off = (f.t / 1000 * f.world.wind.speed * 8) % 12;
+    for (var i = -3; i <= 3; i++) for (var j = -3; j <= 3; j++) {
+      var cx = b.x + i * 12 + Math.cos(d) * off, cy = b.y + j * 12 + Math.sin(d) * off, s0 = w2s(cx, cy), s1 = w2s(cx + Math.cos(d) * 3, cy + Math.sin(d) * 3);
+      ctx.beginPath(); ctx.moveTo(s0[0], s0[1]); ctx.lineTo(s1[0], s1[1]); ctx.stroke();
+    }
+  }
+  // looming objects: shadow + disc (top-down)
+  f.world.objects.forEach(function(o){
+    var q = w2s(o.x, o.y);
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(q[0] + o.z * 0.2 * z, q[1] + o.z * 0.2 * z, o.r * z, o.r * z * 0.8, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = css.ink; ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.arc(q[0], q[1], o.r * z, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    var bq = w2s(b.x, b.y); ctx.strokeStyle = css.muted; ctx.setLineDash([4 * dpr, 4 * dpr]); ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(bq[0], bq[1]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = css.ink; ctx.fillText(Math.round(o.theta) + '° wide · ' + Math.round(o.z) + ' mm up', q[0] + o.r * z + 6, q[1]);
+  });
+  drawFly(b, f);
+}
+function drawFly(b, f){
+  var q = w2s(b.x, b.y), z = zoom * dpr, sc = 1 + b.z / 50;
+  // shadow
+  ctx.save(); ctx.translate(q[0] + b.z * 0.35 * z, q[1] + b.z * 0.35 * z); ctx.rotate(-b.heading);
+  ctx.fillStyle = 'rgba(0,0,0,' + (b.airborne ? 0.12 : 0.2) + ')'; ctx.beginPath(); ctx.ellipse(-0.1 * z, 0, 1.5 * z, 0.55 * z, 0, 0, 7); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(-b.heading); ctx.scale(z * sc, -z * sc);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // legs (tripod gait)
+  ctx.strokeStyle = css.fly; ctx.lineWidth = 0.07;
+  var bases = [0.55, 0.3, 0.05], reach = [[0.9, 0.9], [0.1, 1.1], [-0.7, 0.95]];
+  for (var s = -1; s <= 1; s += 2) for (var k = 0; k < 3; k++) {
+    var phase = b.legPhase * 6 + ((k % 2 === 0) === (s > 0) ? 0 : Math.PI);
+    var sw = b.airborne ? 0 : Math.sin(phase) * 0.25;
+    var tx = reach[k][0] + sw, ty = s * reach[k][1] * (b.airborne ? 0.55 : 1);
+    var kx = bases[k] + (tx - bases[k]) * 0.45 + (k === 0 ? 0.15 : k === 2 ? -0.15 : 0), ky = s * 0.75 * (b.airborne ? 0.6 : 1);
+    ctx.beginPath(); ctx.moveTo(bases[k], s * 0.25); ctx.lineTo(kx, ky); ctx.lineTo(tx, ty); ctx.stroke();
+  }
+  // wings
+  ctx.fillStyle = css.wing; ctx.strokeStyle = 'rgba(120,140,150,.6)'; ctx.lineWidth = 0.03;
+  for (s = -1; s <= 1; s += 2) {
+    ctx.save(); ctx.translate(0.35, s * 0.15);
+    var open = b.airborne ? (1.05 + 0.35 * Math.sin(b.wingPhase)) : 0.18;
+    ctx.rotate(s * (Math.PI - open)); ctx.beginPath(); ctx.ellipse(0.95, 0, 1.0, 0.33, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+  // abdomen, thorax
+  ctx.fillStyle = css.fly;
+  ctx.beginPath(); ctx.ellipse(-0.65, 0, 0.85, 0.46, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.12)'; for (var st = -1.2; st < -0.1; st += 0.3) { ctx.fillRect(st, -0.4, 0.08, 0.8); }
+  ctx.fillStyle = css.fly; ctx.beginPath(); ctx.ellipse(0.3, 0, 0.55, 0.43, 0, 0, 7); ctx.fill();
+  // head (yaw from neck motor neurons)
+  ctx.save(); ctx.translate(0.78, 0); ctx.rotate(b.headYaw);
+  ctx.beginPath(); ctx.ellipse(0.25, 0, 0.26, 0.38, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = css.eye; ctx.beginPath(); ctx.ellipse(0.25, 0.27, 0.2, 0.15, 0.3, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(0.25, -0.27, 0.2, 0.15, -0.3, 0, 7); ctx.fill();
+  // proboscis
+  if (b.proboscis > 0.03) { ctx.strokeStyle = css.accent; ctx.lineWidth = 0.1; ctx.beginPath(); ctx.moveTo(0.45, 0); ctx.lineTo(0.45 + 0.6 * b.proboscis, 0); ctx.stroke(); ctx.beginPath(); ctx.arc(0.45 + 0.6 * b.proboscis, 0, 0.08, 0, 7); ctx.fillStyle = css.accent; ctx.fill(); }
+  // antennae
+  ctx.strokeStyle = css.fly; ctx.lineWidth = 0.06; var aa = 0.35 + b.antenna * 0.3;
+  for (s = -1; s <= 1; s += 2) { ctx.beginPath(); ctx.moveTo(0.45, s * 0.08); ctx.lineTo(0.45 + 0.3 * Math.cos(aa), s * (0.08 + 0.3 * Math.sin(aa))); ctx.stroke(); }
+  ctx.restore();
+  ctx.restore();
+  // touch marker
+  if (f.world.touch) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.arc(q[0] + Math.cos(-b.heading) * z, q[1] + Math.sin(-b.heading) * z, 0.9 * z, 0, 7); ctx.stroke(); }
+}
+
+/* ---------------------------------------------------------------- fly's-eye panorama */
+var eyeSpk = null;
+function drawEye(){
+  var e = $('eye'), c = e.getContext('2d'), W = e.width, H = e.height, f = frame;
+  c.fillStyle = css.panel2; c.fillRect(0, 0, W, H);
+  function X(az){ return (az + 180) / 360 * W; } function Y(el){ return (90 - el) / 180 * H; }
+  c.strokeStyle = css.line; c.lineWidth = 1; c.beginPath();
+  [-90, 0, 90].forEach(function(az){ c.moveTo(X(az), 0); c.lineTo(X(az), H); }); c.moveTo(0, Y(0)); c.lineTo(W, Y(0)); c.stroke();
+  c.fillStyle = css.muted; c.font = (10 * dpr) + 'px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+  c.fillText('left', X(-95) - 24 * dpr, 12 * dpr); c.fillText('front', X(0) + 3 * dpr, 12 * dpr); c.fillText('right', X(95), 12 * dpr); c.fillText('rear', 3 * dpr, 12 * dpr);
+  // LPLC2 receptive-field centres; spiking ones light up
+  if (!eyeSpk) eyeSpk = new Float32Array(N);
+  var li = A.loomIdx;
+  for (var k = 0; k < li.length; k++) {
+    var i = li[k]; if (A.az[i] === -32768) continue;
+    var v = eyeSpk[i]; eyeSpk[i] *= 0.85;
+    c.fillStyle = silMask[i] ? css.lesion : css.spike; c.globalAlpha = silMask[i] ? 0.8 : 0.18 + 0.82 * Math.min(1, v);
+    c.beginPath(); c.arc(X(A.az[i] / 10), Y(A.el[i] / 10), (silMask[i] ? 2 : 1.6 + 2.5 * Math.min(1, v)) * dpr, 0, 7); c.fill();
+  }
+  c.globalAlpha = 1;
+  f.world.objects.forEach(function(o){ c.fillStyle = css.ink; c.globalAlpha = 0.8; c.beginPath(); c.ellipse(X(o.az), Y(o.el), Math.max(2, o.theta / 360 * W / 2), Math.max(2, o.theta / 180 * H / 2), 0, 0, 7); c.fill(); c.globalAlpha = 1; });
+  c.fillStyle = css.muted; c.fillText('dots: LPLC2 looming detectors at their receptive-field centres', 4 * dpr, H - 5 * dpr);
+}
+
+/* ---------------------------------------------------------------- motor readout */
+var motorRows = {};
+function buildMotor(){
+  var el = $('motor'); el.innerHTML = '<div class="h">Output</div><div class="h" style="text-align:right">left</div><div class="h">right</div><div class="h" style="text-align:right">Hz</div>';
+  Object.keys(motorInfo).forEach(function(k){
+    var mi = motorInfo[k];
+    var nm = document.createElement('div'); nm.className = 'nm'; nm.innerHTML = esc(mi.label) + ' <small>' + esc((mi.types && mi.types.length ? mi.types.slice(0, 3).join(' ') : 'MN') + (mi.types && mi.types.length > 3 ? '…' : '')) + '</small>'; nm.title = mi.ref;
+    var l = document.createElement('div'); l.className = 'bar l'; l.innerHTML = '<i></i>';
+    var r = document.createElement('div'); r.className = 'bar r'; r.innerHTML = '<i></i>';
+    var hz = document.createElement('div'); hz.className = 'hz';
+    [nm, l, r, hz].forEach(function(x){ el.appendChild(x); });
+    motorRows[k] = {nm: nm, l: l.firstChild, r: r.firstChild, hz: hz, idx: []};
+  });
+  // indices for lesion display
+  Object.keys(motorInfo).forEach(function(k){
+    var mi = motorInfo[k];
+    motorRows[k].idx = mi.types && mi.types.length ? byTypes(mi.types) : ({prob: bySub(['proboscis_motor_neuron','haustellum_motor_neuron']), ingest: bySub(['ingestion_motor_neuron']), neck: bySub(['neck_motor_neuron']), ant: bySub(['antennal_motor_neuron'])}[k] || []);
+  });
+}
+function refreshMotorSil(){ for (var k in motorRows) { var ix = motorRows[k].idx, all = ix.length && ix.every(function(i){ return silMask[i]; }); motorRows[k].nm.parentNode && motorRows[k].nm.classList.toggle('silenced', all); motorRows[k].nm.style.color = all ? css.lesion : ''; motorRows[k].nm.style.textDecoration = all ? 'line-through' : ''; } }
+function drawMotor(){
+  var m = frame.motor;
+  for (var k in motorRows) {
+    var v = m[k] || [0, 0], row = motorRows[k];
+    row.l.style.width = Math.min(100, v[0] / 1.5) + '%'; row.r.style.width = Math.min(100, v[1] / 1.5) + '%';
+    row.hz.textContent = Math.round(v[0]) + ' · ' + Math.round(v[1]);
+  }
+  var b = frame.body, hud = $('hud'), h = '';
+  h += b.airborne ? '<span class="pill air">Airborne ' + Math.round(b.z) + ' mm</span>' : (Math.abs(b.v) > 1.5 ? '<span class="pill">Walking ' + fmt(b.v, 0) + ' mm/s</span>' : '<span class="pill">Standing</span>');
+  if (Math.abs(b.omega) > 0.3) h += '<span class="pill">Turning ' + (b.omega > 0 ? 'left' : 'right') + '</span>';
+  if (b.proboscis > 0.2) h += '<span class="pill air">Proboscis out</span>';
+  if (hitUntil > performance.now()) h += '<span class="pill hit">Hit by object</span>';
+  var ns = 0; for (var i = 0; i < items.length; i++) if (items[i].mode === 'silence') ns += items[i].idx.length;
+  if (ns) h += '<span class="pill les">' + ns.toLocaleString() + ' neurons silenced</span>';
+  hud.innerHTML = h;
+}
+var hitUntil = 0;
+function addLog(ev){
+  var txt = {takeoff: 'TAKE-OFF · ' + (ev.mode || ''), landed: 'landed', hit: 'HIT — object reached the fly on the ground', missed: 'object passed, fly escaped', reset: 'fresh fly'}[ev.e] || ev.text || ev.e;
+  if (ev.e === 'hit') hitUntil = performance.now() + 1500;
+  var d = document.createElement('div'); d.className = 'e-' + ev.e; d.innerHTML = '<b>' + (ev.t / 1000).toFixed(3) + ' s</b> ' + esc(txt);
+  var L = $('log'); L.insertBefore(d, L.firstChild); while (L.children.length > 60) L.removeChild(L.lastChild);
+}
+
+/* ---------------------------------------------------------------- brain map */
+var brainBase = null, brainOv = null, bgeo = null, typeCountsWin = null;
+function buildBrainGeom(){
+  var minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+  for (var i = 0; i < N; i++) { var x = A.pos[i * 3], y = A.pos[i * 3 + 1]; if (!x && !y) continue; if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y; }
+  bgeo = {minx: minx, maxx: maxx, miny: miny, maxy: maxy};
+}
+function bxy(i, W, H){
+  var g = bgeo, sx = (W - 16) / (g.maxx - g.minx), sy = (H - 16) / (g.maxy - g.miny), s = Math.min(sx, sy);
+  var ox = (W - (g.maxx - g.minx) * s) / 2, oy = (H - (g.maxy - g.miny) * s) / 2;
+  return [ox + (A.pos[i * 3] - g.minx) * s, oy + (A.pos[i * 3 + 1] - g.miny) * s];
+}
+function buildBrainBase(W, H){
+  brainBase = document.createElement('canvas'); brainBase.width = W; brainBase.height = H;
+  var c = brainBase.getContext('2d'); c.fillStyle = css.panel2; c.fillRect(0, 0, W, H);
+  c.fillStyle = css.muted; c.globalAlpha = 0.16;
+  for (var i = 0; i < N; i += 1) { if (!A.pos[i * 3]) continue; var p = bxy(i, W, H); c.fillRect(p[0], p[1], 1, 1); }
+  c.globalAlpha = 0.9;
+  for (i = 0; i < N; i++) { if (!silMask[i] && !actMask[i]) continue; p = bxy(i, W, H); c.fillStyle = silMask[i] ? css.lesion : css.accent; c.fillRect(p[0] - 0.5, p[1] - 0.5, 1.6 * dpr, 1.6 * dpr); }
+  brainOv = document.createElement('canvas'); brainOv.width = W; brainOv.height = H;
+}
+function drawBrain(){
+  var bc = $('brain'); if (!bc.width || $('tab-brain').hidden) return;
+  var W = bc.width, H = bc.height;
+  if (!brainBase || brainBase.width !== W) buildBrainBase(W, H);
+  var o = brainOv.getContext('2d');
+  o.globalCompositeOperation = 'destination-out'; o.fillStyle = 'rgba(0,0,0,0.22)'; o.fillRect(0, 0, W, H); o.globalCompositeOperation = 'source-over';
+  o.fillStyle = css.spike;
+  var sp = frame.spikes, step = sp.length > 20000 ? 3 : 1;
+  for (var k = 0; k < sp.length; k += step) { var p = bxy(sp[k], W, H); o.fillRect(p[0] - dpr, p[1] - dpr, 2.2 * dpr, 2.2 * dpr); }
+  var c = bc.getContext('2d'); c.drawImage(brainBase, 0, 0); c.drawImage(brainOv, 0, 0);
+  c.fillStyle = css.muted; c.font = (10 * dpr) + 'px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+  c.fillText('fly left', 6 * dpr, H - 6 * dpr); c.fillText('fly right', W - 56 * dpr, H - 6 * dpr);
+}
+function drawSide(){
+  if (frame.top) {
+    var h = '';
+    frame.top.forEach(function(t){ h += '<span>' + esc(M.types[t[0]]) + ' <span class="src">' + typeCount[t[0]] + ' n</span></span><span class="v">' + (t[1] * 4).toLocaleString() + '/s</span>'; });
+    $('topList').innerHTML = h || '<span class="empty">Silent. Give the fly a stimulus.</span><span></span>';
+  }
+  if (!$('tab-brain').hidden) {
+    var s = '';
+    Object.keys(sensorInfo).forEach(function(k){ var v = frame.sens[k] || 0; s += '<span>' + esc(sensorInfo[k].label) + '</span><span class="bar r"><i style="width:' + Math.min(100, v / 2) + '%"></i></span><span class="hz">' + Math.round(v) + '</span>'; });
+    $('sensList').innerHTML = s;
+  }
+}
+
+/* ---------------------------------------------------------------- draw loop */
+function draw(){
+  if (frame) {
+    if (frame.spikes && eyeSpk) for (var k = 0; k < frame.spikes.length; k++) eyeSpk[frame.spikes[k]] += 1;
+    drawArena(); drawEye(); drawMotor(); drawBrain(); drawSide();
+    $('tRead').textContent = (frame.t / 1000).toFixed(3);
+    $('rtfRead').textContent = frame.rtf ? frame.rtf.toFixed(2) : '–';
+    $('spkRead').textContent = frame.nSpikes.toLocaleString();
+    frame.spikes = new Int32Array(0);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* ---------------------------------------------------------------- header controls */
+$('runBtn').onclick = function(){ running = !running; worker.postMessage({type:'run', on: running}); this.textContent = running ? 'Pause' : 'Run'; this.classList.toggle('primary', running); };
+$('speedSel').onchange = function(){ worker.postMessage({type:'speed', speed: +this.value}); };
+$('resetBtn').onclick = function(){ worker.postMessage({type:'reset', seed: 1 + Math.floor(Math.random() * 1000)}); cam = {x:0, y:0}; };
+$('clearBtn').onclick = function(){ worker.postMessage({type:'stim', kind:'clear'}); };
+document.querySelectorAll('.tabs button').forEach(function(b){
+  b.onclick = function(){
+    document.querySelectorAll('.tabs button').forEach(function(x){ x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+    ['lesion','exp','brain','model'].forEach(function(t){ $('tab-' + t).hidden = t !== b.dataset.tab; });
+    if (b.dataset.tab === 'brain') setTimeout(resize, 0);
+  };
+});
+function bindParam(id, key, fmtFn){ var el = $(id); el.oninput = function(){ var p = {}; p[key] = +el.value; worker.postMessage({type:'params', params: p}); $(id + 'V').textContent = fmtFn(+el.value); }; }
+bindParam('arousal', 'arousal', function(v){ return v ? v.toFixed(1) + ' mV' : 'off'; });
+bindParam('noise', 'noise', function(v){ return v ? v.toFixed(2) + ' mV' : 'off'; });
+bindParam('stdU', 'stdU', function(v){ return v.toFixed(2); });
+bindParam('adapt', 'adaptInc', function(v){ return v.toFixed(2) + ' mV'; });
+$('visMode').onchange = function(){ worker.postMessage({type:'params', params: {visualMode: this.value}}); };
+
+function buildModelTables(){
+  var tb = $('motorTbl').querySelector('tbody');
+  Object.keys(motorInfo).forEach(function(k){ var m = motorInfo[k]; var tr = document.createElement('tr'); tr.innerHTML = '<td>' + esc(m.label) + '</td><td>' + esc(m.types && m.types.length ? m.types.join(', ') : 'motor neurons') + ' <span class="src">(' + m.n + ')</span></td><td class="src">' + esc(m.ref) + '</td>'; tb.appendChild(tr); });
+  var st = $('sensTbl').querySelector('tbody');
+  Object.keys(sensorInfo).forEach(function(k){ var s = sensorInfo[k]; var tr = document.createElement('tr'); tr.innerHTML = '<td>' + esc(s.label) + '</td><td class="num">' + s.n.toLocaleString() + '</td>'; st.appendChild(tr); });
+}
+
+/* ---------------------------------------------------------------- experiments */
+var METRICS = [
+  ['takeoff', 'Take-off probability', function(s){ return s.takeoff; }, 'p'],
+  ['hit', 'Hit before escaping', function(s){ return s.hit; }, 'p'],
+  ['takeoffT', 'Take-off time (ms)', function(s){ return s.takeoffT; }, 'ms'],
+  ['gfMode', 'Share of Giant-Fiber take-offs', function(s){ return s.gfMode; }, 'p'],
+  ['gf', 'Giant Fiber spikes', function(s){ return s.spikes.gf; }, 'n'],
+  ['loom', 'Looming-DN spikes', function(s){ return s.spikes.loom; }, 'n'],
+  ['prob', 'Proboscis motor neuron spikes', function(s){ return s.spikes.prob; }, 'n'],
+  ['ingest', 'Ingestion motor neuron spikes', function(s){ return s.spikes.ingest; }, 'n'],
+  ['fwd', 'Forward-walking DN spikes', function(s){ return s.spikes.fwd; }, 'n'],
+  ['turnDN', 'Turning DN spikes', function(s){ return s.spikes.turn; }, 'n'],
+  ['neck', 'Neck motor neuron spikes', function(s){ return s.spikes.neck; }, 'n'],
+  ['turn', 'Net body turn (°, + = left)', function(s){ return s.turn; }, 'deg'],
+  ['total', 'Total brain spikes', function(s){ return s.total; }, 'n']
+];
+METRICS.forEach(function(m){ var o = document.createElement('option'); o.value = m[0]; o.textContent = m[1]; $('metricSel').appendChild(o); });
+function fillProtocols(){ var s = $('protoSel'); s.innerHTML = ''; protocols.forEach(function(p){ var o = document.createElement('option'); o.value = p.key; o.textContent = p.label; s.appendChild(o); }); }
+$('protoSel').onchange = function(){ var k = this.value; $('metricSel').value = k.indexOf('loom') === 0 ? 'takeoff' : (k === 'sugar' || k === 'bitter') ? 'prob' : k.indexOf('touch') === 0 ? 'neck' : 'total'; };
+$('screenSrc').onchange = function(){ var v = this.value; $('screenExtra').hidden = !(v === 'custom' || v === 'each'); $('screenText').placeholder = v === 'each' ? 'one cell type, e.g. LPLC2' : 'LPLC2, LC4, LC6, DNp02'; };
+var expRunning = false, expMeta = null, expSeq = 0, upstreamCb = {};
+function startExp(conds, kind, title){
+  if (expRunning) { flash('An experiment is already running.'); return; }
+  expRunning = true; expSeq++;
+  var metric = $('metricSel').value, proto = $('protoSel').value, trials = Math.max(1, Math.min(30, +$('trialsIn').value || 5));
+  expMeta = {id: expSeq, metric: metric, kind: kind, title: title, proto: proto};
+  $('expTitle').textContent = title; $('expRes').innerHTML = ''; $('expTbl').innerHTML = ''; $('expProg').style.width = '0';
+  $('expStatus').textContent = 'Running ' + conds.length + ' conditions × ' + trials + ' trials. The live fly is paused meanwhile.';
+  $('cancelBtn').hidden = false;
+  worker.postMessage({type:'experiment', id: expSeq, protocol: proto, trials: trials, kind: kind, conditions: conds.map(function(c){ return {label: c.label, silence: c.silence, forced: c.forced}; })});
+}
+$('cancelBtn').onclick = function(){ worker.postMessage({type:'cancel'}); };
+$('cmpBtn').onclick = function(){
+  var sil = [], act = []; for (var i = 0; i < N; i++) { if (silMask[i]) sil.push(i); else if (actMask[i]) act.push(i); }
+  if (!sil.length && !act.length) { flash('Add a lesion or activation in the Lesions tab first.'); return; }
+  startExp([{label: 'Intact', silence: []}, {label: items.map(function(it){ return (it.mode === 'activate' ? '+' : '−') + it.label; }).join(', '), silence: sil, forced: act}], 'compare', 'Intact vs. manipulated');
+};
+$('screenBtn').onclick = function(){
+  var src = $('screenSrc').value, conds = [{label: 'Intact', silence: []}];
+  if (src === 'regions') {
+    REGIONS.forEach(function(r){
+      var paired = r.nps.some(function(n){ return M.neuropils.indexOf(n + '_L') >= 0; });
+      (paired ? ['L','R'] : ['both']).forEach(function(s){ var idx = byNeuropils(npNames(r.nps, s)); if (idx.length) conds.push({label: r.label + (s === 'both' ? '' : ' ' + s), silence: idx}); });
+    });
+    startExp(conds, 'screen', 'Region knockout screen');
+  } else if (src.indexOf('up:') === 0) {
+    var key = src.slice(3), targets = motorRows[key].idx, id = 'u' + (++expSeq);
+    $('expStatus').textContent = 'Finding the strongest inputs…';
+    upstreamCb[id] = function(list){
+      list.forEach(function(t){ var nm = M.types[t[0]]; conds.push({label: nm + ' (' + (t[1] > 0 ? '+' : '') + Math.round(t[1]) + ' syn)', silence: byTypes([nm])}); });
+      startExp(conds, 'screen', 'Input knockout screen: ' + motorInfo[key].label);
+    };
+    worker.postMessage({type:'upstream', id: id, targets: targets, hops: 1, k: 20});
+  } else if (src === 'custom') {
+    $('screenText').value.split(/[,\s]+/).filter(Boolean).forEach(function(t){ var idx = byTypes([t]); if (idx.length) conds.push({label: t, silence: idx}); else flash('Skipped unknown type ' + t); });
+    if (conds.length < 2) { flash('List at least one known cell type.'); return; }
+    startExp(conds, 'screen', 'Custom knockout screen');
+  } else if (src === 'each') {
+    var t = $('screenText').value.trim(), idx = byTypes([t]);
+    if (!idx.length) { flash('Type one known cell type, e.g. LPLC2.'); return; }
+    idx.slice(0, 80).forEach(function(i, k){ conds.push({label: t + ' #' + (k + 1) + ' ' + M.sides[A.side[i]], silence: [i]}); });
+    if (idx.length > 80) flash('Screening the first 80 of ' + idx.length + ' ' + t + ' neurons.');
+    startExp(conds, 'screen', 'Single-neuron screen: ' + t);
+  }
+};
+function onExpProgress(m){ $('expProg').style.width = (100 * m.done / m.total) + '%'; $('expStatus').textContent = m.done + ' / ' + m.total + ' trials · ' + m.label; }
+function onExpPartial(m){ renderResults(m.results, false); }
+function onExpResult(m){ expRunning = false; $('cancelBtn').hidden = true; $('expStatus').textContent = 'Done: ' + m.protocolLabel + ', ' + m.results[0].summary.n + ' trials per condition.'; renderResults(m.results, true); }
+function renderResults(results, final){
+  var met = METRICS.filter(function(x){ return x[0] === expMeta.metric; })[0], get = met[2];
+  var base = get(results[0].summary);
+  var rows = results.map(function(r, i){ return {r: r, v: get(r.summary), i: i}; });
+  if (final && expMeta.kind === 'screen') rows = [rows[0]].concat(rows.slice(1).sort(function(a, b){ return Math.abs((b.v || 0) - (base || 0)) - Math.abs((a.v || 0) - (base || 0)); }));
+  var maxv = Math.max.apply(null, rows.map(function(x){ return Math.abs(x.v || 0); }).concat([met[3] === 'p' ? 1 : 1e-9]));
+  var h = '';
+  rows.forEach(function(x){
+    var v = x.v, d = (v !== null && base !== null) ? v - base : null;
+    var vs = met[3] === 'p' ? (v === null ? '–' : Math.round(v * 100) + '%') : fmt(v, met[3] === 'n' ? 0 : 1);
+    var ds = x.i === 0 ? 'baseline' : d === null ? '–' : (d > 0 ? '+' : '') + (met[3] === 'p' ? Math.round(d * 100) + ' pt' : fmt(d, met[3] === 'n' ? 0 : 1));
+    h += '<div class="resrow' + (x.i === 0 ? ' base' : '') + '"><span title="' + esc(x.r.label) + '" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(x.r.label) + ' <span class="src">' + (x.r.n ? x.r.n.toLocaleString() + ' n' : '') + '</span></span>' +
+      '<span class="rb"><i style="width:' + (v === null ? 0 : Math.min(100, Math.abs(v) / maxv * 100)) + '%"></i></span>' +
+      '<span class="dv ' + (x.i === 0 || d === null ? '' : d < 0 ? 'down' : d > 0 ? 'up' : '') + '">' + vs + '<br>' + ds + '</span></div>';
+  });
+  $('expRes').innerHTML = h;
+  if (expMeta.kind === 'compare') {
+    var t = '<table><thead><tr><th>Measure</th>' + results.map(function(r){ return '<th class="num">' + esc(r.label.length > 22 ? r.label.slice(0, 22) + '…' : r.label) + '</th>'; }).join('') + '</tr></thead><tbody>';
+    METRICS.forEach(function(mm){ t += '<tr><td>' + esc(mm[1]) + '</td>' + results.map(function(r){ var v = mm[2](r.summary); return '<td class="num">' + (mm[3] === 'p' ? (v === null ? '–' : Math.round(v * 100) + '%') : fmt(v, mm[3] === 'n' ? 0 : 1)) + '</td>'; }).join('') + '</tr>'; });
+    t += '</tbody></table>';
+    if (results.every(function(r){ return r.trials; })) {
+      t += '<p class="src" style="margin-top:6px">Per trial (take-off time · mode): ' + results.map(function(r){ return esc(r.label.slice(0, 18)) + ': ' + r.trials.map(function(x){ return x.takeoff ? x.takeoffT + (x.mode === 'GF' ? 'GF' : 'L') : (x.hit ? 'hit' : '—'); }).join(' '); }).join(' | ') + '</p>';
+    }
+    $('expTbl').innerHTML = t;
+  }
+}
+})();
+</script>
